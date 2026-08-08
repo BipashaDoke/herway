@@ -11,6 +11,7 @@ const navItems = [
 
 const DesktopNav = () => (
   <header className="hidden md:flex items-center justify-between h-16 px-6 bg-surface border-b border-gray-100 sticky top-0 z-30">
+    {/* Logo with text – always visible on desktop */}
     <NavLink to="/" className="flex items-center gap-2">
       <HerWayLogo />
     </NavLink>

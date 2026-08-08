@@ -1,4 +1,3 @@
-// src/components/journey/JourneySearch.jsx
 import { useState, useRef, useEffect } from 'react';
 import { Search, MapPin } from 'lucide-react';
 
@@ -10,6 +9,14 @@ const suggestions = [
   { name: 'Police Chowki', coords: [18.5202, 73.8580] },
   { name: 'Cafe Corner', coords: [18.5195, 73.8575] },
   { name: 'ATM', coords: [18.5205, 73.8560] },
+   { name: 'Sinhgad Road', coords: [18.5050, 73.8560] },
+  { name: 'Anand Nagar', coords: [18.5100, 73.8670] },
+  { name: 'Dhayari', coords: [18.4850, 73.8300] },
+  { name: 'Katraj', coords: [18.4550, 73.8650] },
+  { name: 'Swargate', coords: [18.5010, 73.8630] },
+  { name: 'Deccan Gymkhana', coords: [18.5190, 73.8440] },
+  { name: 'Pune Railway Station', coords: [18.5290, 73.8740] },
+  { name: 'Sassoon Hospital', coords: [18.5260, 73.8730] },
 ];
 
 const JourneySearch = ({ onSelect, disabled }) => {
@@ -55,7 +62,7 @@ const JourneySearch = ({ onSelect, disabled }) => {
         />
       </div>
       {showSuggestions && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full bg-surface border border-gray-100 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-[1000] mt-1 w-full bg-surface border border-gray-100 rounded-xl shadow-lg max-h-48 overflow-y-auto">
           {filtered.map((place, idx) => (
             <button
               key={idx}

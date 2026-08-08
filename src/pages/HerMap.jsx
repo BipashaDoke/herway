@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import HerMapView from '../components/map/HerMapView';
 import JourneySearch from '../components/journey/JourneySearch';
 import RouteOptions from '../components/journey/RouteOptions';
@@ -7,51 +7,31 @@ import DestinationCard from '../components/journey/DestinationCard';
 import GuardianMode from '../components/guardian/GuardianMode';
 import QuickReport from '../components/reports/QuickReport';
 import Card from '../components/ui/Card';
-import { MapPin } from 'lucide-react';
-import { Shield } from 'lucide-react';
+import { MapPin, Shield } from 'lucide-react';
+import { useLocation } from '../context/LocationContext';
 
-// default Vadgaon
 const DEFAULT_DESTINATION = { name: 'Sinhgad College of Engineering', coords: [18.5204, 73.8567] };
 
-// Mock scoring function based on time
 const getTimeContextScore = (time) => {
   const hour = time.getHours();
-  if (hour >= 6 && hour < 18) return 10; // day
-  if (hour >= 18 && hour < 22) return 5; // evening
-  return -5; // late night
+  if (hour >= 6 && hour < 18) return 10;
+  if (hour >= 18 && hour < 22) return 5;
+  return -5;
 };
 
 const HerMap = () => {
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [showCurrentLocMarker, setShowCurrentLocMarker] = useState(false);
+  // Use shared location context (initially null, set by crosshair button)
+  const { currentLocation, setCurrentLocation, showCurrentLocMarker, setShowCurrentLocMarker } = useLocation();
+
   const [destination, setDestination] = useState(null);
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [journeyStarted, setJourneyStarted] = useState(false);
   const [travelTime, setTravelTime] = useState(new Date());
   const [showGuardian, setShowGuardian] = useState(false);
-  const [destinationData, setDestinationData] = useState(null); // for HerSpace card
+  const [destinationData, setDestinationData] = useState(null);
 
-  // Geolocation
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setCurrentLocation([latitude, longitude]);
-          setShowCurrentLocMarker(true);
-        },
-        (err) => {
-          console.warn('Geolocation denied, using default');
-          setCurrentLocation([18.5204, 73.8567]); // fallback
-        }
-      );
-    } else {
-      setCurrentLocation([18.5204, 73.8567]);
-    }
-  }, []);
-
-  // Fetch routes from OSRM when destination and current location are set
+  // Fetch routes when currentLocation and destination are set
   useEffect(() => {
     if (!currentLocation || !destination) return;
 
@@ -65,24 +45,20 @@ const HerMap = () => {
         const data = await res.json();
         if (data.code !== 'Ok' || !data.routes) throw new Error('No routes');
 
-        // Map routes to include mock scores and types
         const enrichedRoutes = data.routes.map((route, idx) => {
           const dist = (route.distance / 1000).toFixed(1);
           const dur = Math.round(route.duration / 60);
-          // Mock scores: first route = fastest, second = safer, third = accessible (if available)
           let type = 'fastest';
           let herRouteScore = 76;
           if (idx === 1) { type = 'safer'; herRouteScore = 89; }
           if (idx === 2) { type = 'accessible'; herRouteScore = 86; }
-          // Randomize scores a bit
           return {
             ...route,
             type,
             herRouteScore,
             distance: dist,
             duration: dur,
-            geometry: route.geometry, // already GeoJSON
-            // mock breakdown
+            geometry: route.geometry,
             safety: 85 + Math.floor(Math.random() * 10),
             lighting: 80 + Math.floor(Math.random() * 15),
             footfall: 75 + Math.floor(Math.random() * 20),
@@ -91,7 +67,7 @@ const HerMap = () => {
           };
         });
         setRoutes(enrichedRoutes);
-        setSelectedRoute(0); // default to first
+        setSelectedRoute(0);
       } catch (err) {
         console.error(err);
         setRoutes([]);
@@ -104,13 +80,10 @@ const HerMap = () => {
 
   const handleDestinationSelect = (place) => {
     setDestination(place);
-    // Set mock destination data for HerSpace card
     setDestinationData({
       name: place.name,
       herSpaceScore: 87,
-      // other details
     });
-    // Reset journey
     setJourneyStarted(false);
     setRoutes([]);
     setSelectedRoute(null);
@@ -118,7 +91,6 @@ const HerMap = () => {
 
   const handleStartJourney = () => {
     setJourneyStarted(true);
-    // Could trigger Guardian if active, etc.
   };
 
   const timeContextScore = getTimeContextScore(travelTime);
@@ -127,9 +99,9 @@ const HerMap = () => {
     : 0;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="h-full flex flex-col">
       {/* Search bar */}
-      <div className="p-3 md:p-4 bg-surface border-b border-gray-100">
+      <div className="p-3 md:p-4 bg-surface border-b border-gray-100 flex-none">
         <div className="flex items-center gap-3 max-w-2xl mx-auto">
           <JourneySearch onSelect={handleDestinationSelect} disabled={journeyStarted} />
           <div className="hidden md:flex items-center gap-2 text-sm text-text-secondary">
@@ -151,7 +123,7 @@ const HerMap = () => {
       </div>
 
       {/* Map area */}
-      <div className="relative h-[650px] p-3 md:p-4">
+      <div className="flex-1 min-h-0 relative">
         <HerMapView
           destination={destination?.coords || null}
           setDestination={setDestination}
@@ -165,7 +137,7 @@ const HerMap = () => {
           setShowCurrentLocMarker={setShowCurrentLocMarker}
         />
 
-        {/* Floating action buttons */}
+        {/* Floating Guardian button */}
         <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
           <button
             onClick={() => setShowGuardian(!showGuardian)}
@@ -177,14 +149,12 @@ const HerMap = () => {
         </div>
         <QuickReport />
 
-        {/* Guardian panel (if open) */}
         {showGuardian && (
           <div className="absolute top-4 left-4 z-[1001] w-64 md:w-72">
             <GuardianMode />
           </div>
         )}
 
-        {/* Route options bottom sheet (desktop: overlay, mobile: bottom) */}
         {destination && routes.length > 0 && !journeyStarted && (
           <div className="absolute bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-md z-[1000]">
             <RouteOptions
@@ -196,7 +166,6 @@ const HerMap = () => {
           </div>
         )}
 
-        {/* Journey active info */}
         {journeyStarted && routes.length > 0 && (
           <div className="absolute bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-md z-[1000]">
             <Card className="p-4 space-y-2">
@@ -218,7 +187,7 @@ const HerMap = () => {
         )}
       </div>
 
-      {/* Desktop bottom panel (scores/destination) */}
+      {/* Desktop bottom panel */}
       {destination && !journeyStarted && (
         <div className="hidden md:block p-4 bg-surface border-t border-gray-100">
           <div className="max-w-2xl mx-auto grid grid-cols-2 gap-4">

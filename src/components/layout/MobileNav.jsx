@@ -9,8 +9,8 @@ const items = [
 ];
 
 const MobileNav = () => (
-  <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-gray-100 z-30 safe-area-bottom">
-    <div className="flex items-center justify-around h-16">
+  <nav className="md:hidden flex-none h-16 bg-surface border-t border-gray-100 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] z-30">
+    <div className="flex items-center justify-around h-full">
       {items.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
