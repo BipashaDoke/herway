@@ -4,8 +4,10 @@ import CurrentLocationMarker from './CurrentLocationMarker';
 import FacilityMarkers from './FacilityMarkers';
 import RouteLayer from './RouteLayer';
 import MapControls from './MapControls';
-import { createCustomMarker } from './markerIcons';
 import FitBounds from './FitBounds';
+import FacilityChips from './FacilityChips';
+import RouteSafetyLayer from './RouteSafetyLayer';
+import { createCustomMarker } from './markerIcons';
 
 const DEFAULT_CENTER = [18.5204, 73.8567];
 const DEFAULT_ZOOM = 15;
@@ -16,6 +18,8 @@ const MapContent = ({
   selectedRoute,
   showCurrentLocMarker,
   currentLocation,
+  facilityFilters,
+  travelTime,
 }) => {
   return (
     <>
@@ -23,12 +27,16 @@ const MapContent = ({
         <CurrentLocationMarker position={currentLocation} />
       )}
       {destination && (
-        <Marker
-          position={destination}
-          icon={createCustomMarker('border-plum', '📍')}
-        />
+        <Marker position={destination} icon={createCustomMarker('border-plum', '📍')} />
       )}
-      <FacilityMarkers />
+      <FacilityMarkers
+        filters={facilityFilters}
+        route={routes[selectedRoute]}
+        travelTime={travelTime}
+      />
+      {routes.length > 0 && selectedRoute !== null && (
+        <RouteSafetyLayer route={routes[selectedRoute]} />
+      )}
       {routes.length > 0 && (
         <RouteLayer routes={routes} selectedRoute={selectedRoute} />
       )}
@@ -44,6 +52,9 @@ const HerMapView = ({
   setCurrentLocation,
   showCurrentLocMarker,
   setShowCurrentLocMarker,
+  facilityFilters,
+  setFacilityFilters,
+  travelTime,
 }) => {
   const [mapCenter] = useState(DEFAULT_CENTER);
 
@@ -71,12 +82,17 @@ const HerMapView = ({
         />
         <MapControls onLocate={handleLocate} />
         <FitBounds routes={routes} selectedRoute={selectedRoute} />
+        <div className="absolute top-2 left-2 z-[1000]">
+          <FacilityChips activeFilters={facilityFilters} setActiveFilters={setFacilityFilters} />
+        </div>
         <MapContent
           destination={destination}
           routes={routes}
           selectedRoute={selectedRoute}
           showCurrentLocMarker={showCurrentLocMarker}
           currentLocation={currentLocation}
+          facilityFilters={facilityFilters}
+          travelTime={travelTime}
         />
       </MapContainer>
     </div>

@@ -1,46 +1,60 @@
-import { useState, useRef, useEffect } from 'react';
-import { Search, MapPin } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, MapPin, Loader2 } from 'lucide-react';
 
-const suggestions = [
-  { name: 'Sinhgad College of Engineering', coords: [18.5204, 73.8567] },
-  { name: 'Vadgaon Bus Stop', coords: [18.5208, 73.8572] },
-  { name: 'Campus Pharmacy', coords: [18.5199, 73.8564] },
-  { name: 'Sinhgad Hospital', coords: [18.5212, 73.8555] },
-  { name: 'Police Chowki', coords: [18.5202, 73.8580] },
-  { name: 'Cafe Corner', coords: [18.5195, 73.8575] },
-  { name: 'ATM', coords: [18.5205, 73.8560] },
-   { name: 'Sinhgad Road', coords: [18.5050, 73.8560] },
-  { name: 'Anand Nagar', coords: [18.5100, 73.8670] },
-  { name: 'Dhayari', coords: [18.4850, 73.8300] },
-  { name: 'Katraj', coords: [18.4550, 73.8650] },
-  { name: 'Swargate', coords: [18.5010, 73.8630] },
-  { name: 'Deccan Gymkhana', coords: [18.5190, 73.8440] },
-  { name: 'Pune Railway Station', coords: [18.5290, 73.8740] },
-  { name: 'Sassoon Hospital', coords: [18.5260, 73.8730] },
-];
-
-const JourneySearch = ({ onSelect, disabled }) => {
+const JourneySearch = ({ onSelect, disabled, currentLocation }) => {
   const [query, setQuery] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filtered, setFiltered] = useState([]);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef();
 
   useEffect(() => {
-    if (query.trim().length === 0) {
-      setFiltered([]);
-      setShowSuggestions(false);
+    if (!query.trim()) {
+      setResults([]);
+      setShowDropdown(false);
       return;
     }
-    const matches = suggestions.filter((s) =>
-      s.name.toLowerCase().includes(query.toLowerCase())
-    );
-    setFiltered(matches);
-    setShowSuggestions(true);
+    const delayDebounce = setTimeout(() => {
+      fetchSuggestions(query);
+    }, 400);
+    return () => clearTimeout(delayDebounce);
   }, [query]);
+
+  const fetchSuggestions = async (searchText) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        q: searchText,
+        format: 'json',
+        limit: 8,
+        addressdetails: 1,
+      });
+      if (currentLocation) {
+        params.append('lat', currentLocation[0]);
+        params.append('lon', currentLocation[1]);
+        params.append('bounded', 1); // prefer nearby
+        params.append('viewbox', `${currentLocation[1]-0.1},${currentLocation[0]-0.1},${currentLocation[1]+0.1},${currentLocation[0]+0.1}`);
+      }
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
+      const data = await res.json();
+      const formatted = data.map(place => ({
+        name: place.display_name,
+        coords: [parseFloat(place.lat), parseFloat(place.lon)],
+        address: place.address?.city || place.address?.town || place.address?.village || '',
+        distance: place.distance ? `${(place.distance / 1000).toFixed(1)} km` : null,
+      }));
+      setResults(formatted);
+      setShowDropdown(true);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelect = (place) => {
     setQuery(place.name);
-    setShowSuggestions(false);
+    setShowDropdown(false);
     onSelect(place);
   };
 
@@ -53,24 +67,37 @@ const JourneySearch = ({ onSelect, disabled }) => {
           type="text"
           placeholder="Where do you want to go?"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => query && setShowSuggestions(true)}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          onChange={e => setQuery(e.target.value)}
+          onFocus={() => results.length > 0 && setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
           disabled={disabled}
           className="w-full pl-10 pr-4 py-2.5 bg-surface border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-plum/20 focus:border-plum transition"
           aria-label="Search destination"
         />
       </div>
-      {showSuggestions && filtered.length > 0 && (
-        <div className="absolute z-[1000] mt-1 w-full bg-surface border border-gray-100 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-          {filtered.map((place, idx) => (
+      {showDropdown && (
+        <div className="absolute z-[1000] mt-1 w-full bg-surface border border-gray-100 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+          {loading && (
+            <div className="p-3 text-center text-sm text-text-secondary">
+              <Loader2 size={16} className="inline animate-spin mr-2" />
+              Searching…
+            </div>
+          )}
+          {!loading && results.length === 0 && query.trim() && (
+            <div className="p-3 text-sm text-text-secondary">No places found</div>
+          )}
+          {results.map((place, idx) => (
             <button
               key={idx}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-ivory transition-colors text-left"
+              className="w-full flex items-start gap-3 px-4 py-3 text-sm hover:bg-ivory transition-colors text-left"
               onMouseDown={() => handleSelect(place)}
             >
-              <MapPin size={16} className="text-rose" />
-              {place.name}
+              <MapPin size={16} className="text-rose shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-medium truncate">{place.name}</p>
+                {place.address && <p className="text-xs text-text-secondary">{place.address}</p>}
+                {place.distance && <p className="text-xs text-text-secondary">{place.distance}</p>}
+              </div>
             </button>
           ))}
         </div>
