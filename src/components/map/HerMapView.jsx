@@ -18,8 +18,10 @@ const MapContent = ({
   selectedRoute,
   showCurrentLocMarker,
   currentLocation,
-  facilityFilters,
+  activeCategory,
   travelTime,
+  activeServiceId,
+  setActiveServiceId,
 }) => {
   return (
     <>
@@ -27,12 +29,16 @@ const MapContent = ({
         <CurrentLocationMarker position={currentLocation} />
       )}
       {destination && (
-        <Marker position={destination} icon={createCustomMarker('border-plum', '📍')} />
+        <Marker
+          position={destination}
+          icon={createCustomMarker('border-plum', '📍')}
+        />
       )}
       <FacilityMarkers
-        filters={facilityFilters}
-        route={routes[selectedRoute]}
+        activeCategory={activeCategory}
         travelTime={travelTime}
+        activeServiceId={activeServiceId}
+        setActiveServiceId={setActiveServiceId}
       />
       {routes.length > 0 && selectedRoute !== null && (
         <RouteSafetyLayer route={routes[selectedRoute]} />
@@ -46,15 +52,23 @@ const MapContent = ({
 
 const HerMapView = ({
   destination,
+  setDestination,
   routes,
+  setRoutes,
   selectedRoute,
+  setSelectedRoute,
   currentLocation,
   setCurrentLocation,
   showCurrentLocMarker,
   setShowCurrentLocMarker,
-  facilityFilters,
-  setFacilityFilters,
+  activeMapLayers,
+  setActiveMapLayers,
+  activeCategory,
+  setActiveCategory,
   travelTime,
+  activeServiceId,
+  setActiveServiceId,
+  onMapReady,
 }) => {
   const [mapCenter] = useState(DEFAULT_CENTER);
 
@@ -75,6 +89,7 @@ const HerMapView = ({
         style={{ height: '100%', width: '100%' }}
         className="rounded-2xl overflow-hidden"
         zoomControl={false}
+        whenReady={(map) => onMapReady && onMapReady(map.target)}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -83,7 +98,10 @@ const HerMapView = ({
         <MapControls onLocate={handleLocate} />
         <FitBounds routes={routes} selectedRoute={selectedRoute} />
         <div className="absolute top-2 left-2 z-[1000]">
-          <FacilityChips activeFilters={facilityFilters} setActiveFilters={setFacilityFilters} />
+          <FacilityChips
+            activeCategory={activeCategory}
+            setActiveCategory={setActiveCategory}
+          />
         </div>
         <MapContent
           destination={destination}
@@ -91,8 +109,10 @@ const HerMapView = ({
           selectedRoute={selectedRoute}
           showCurrentLocMarker={showCurrentLocMarker}
           currentLocation={currentLocation}
-          facilityFilters={facilityFilters}
+          activeCategory={activeCategory}
           travelTime={travelTime}
+          activeServiceId={activeServiceId}
+          setActiveServiceId={setActiveServiceId}
         />
       </MapContainer>
     </div>
